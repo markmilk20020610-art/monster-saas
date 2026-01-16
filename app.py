@@ -59,7 +59,7 @@ def login_user(email, password):
         
         # 👑 管理员后门：如果是你的邮箱，直接给最高权限
         # ⚠️ 把下面的 'admin@vanguard.com' 换成你自己的邮箱
-        if email == "admin@vanguard.com": 
+        if email == "markmilk20020610@gmail.com": 
             st.session_state.clearance = "OMNI"
         else:
             # 普通用户逻辑：未来可以在这里读取数据库里的会员状态
