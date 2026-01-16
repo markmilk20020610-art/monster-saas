@@ -5,27 +5,23 @@ from supabase import create_client, Client
 
 # --- 1. 页面配置 ---
 st.set_page_config(
-    page_title="VANGUARD | Cloud Access",
+    page_title="VANGUARD | Memory Core",
     page_icon="☢️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. 样式 ---
+# --- 2. 样式美化 ---
 st.markdown("""
 <style>
     .stApp { background-color: #050505; }
-    /* 登录框美化 */
-    .auth-box { border: 2px solid #00ff41; padding: 30px; border-radius: 5px; background: #000; text-align: center;}
-    /* 报告样式 */
     .report-container {
         font-family: 'Courier New', Courier, monospace;
-        color: #00ff41; background-color: #000; padding: 30px; border: 2px solid #00ff41;
-        box-shadow: 0 0 30px rgba(0, 255, 65, 0.2); margin-top: 20px;
+        color: #00ff41; background-color: #000; padding: 25px; border: 1px solid #00ff41;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); margin-bottom: 20px;
     }
-    .warning-box {
-        background-color: #220000; color: #ff3333; padding: 15px; border: 2px solid #ff0000;
-        text-align: center; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 25px;
+    .archive-card {
+        border: 1px solid #333; background: #111; padding: 15px; margin-bottom: 10px; border-radius: 5px;
     }
     /* 隐藏默认菜单 */
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
@@ -33,38 +29,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. 初始化连接 ---
-# 从 Secrets 获取钥匙
 try:
     google_key = st.secrets["GOOGLE_API_KEY"]
     supabase_url = st.secrets["supabase"]["url"]
     supabase_key = st.secrets["supabase"]["key"]
-    
-    # 连接 Supabase
     supabase: Client = create_client(supabase_url, supabase_key)
 except Exception as e:
-    st.error(f"⛔ SYSTEM ERROR: 配置缺失。请检查 Secrets。错误信息: {e}")
+    st.error(f"⛔ CONFIG ERROR: {e}")
     st.stop()
 
-# --- 4. 身份验证逻辑 (Auth Logic) ---
-
-if 'user' not in st.session_state:
-    st.session_state.user = None
-if 'clearance' not in st.session_state:
-    st.session_state.clearance = "LEVEL 1" # 默认等级
+# --- 4. 身份验证逻辑 ---
+if 'user' not in st.session_state: st.session_state.user = None
+if 'clearance' not in st.session_state: st.session_state.clearance = "LEVEL 1"
 
 def login_user(email, password):
     try:
         response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         st.session_state.user = response.user
-        
-        # 👑 管理员后门：如果是你的邮箱，直接给最高权限
-        # ⚠️ 把下面的 'admin@vanguard.com' 换成你自己的邮箱
+        # 👑 权限判断
         if email == "markmilk20020610@gmail.com": 
             st.session_state.clearance = "OMNI"
         else:
-            # 普通用户逻辑：未来可以在这里读取数据库里的会员状态
-            st.session_state.clearance = "LEVEL 1" # 默认新用户是 L1
-            
+            st.session_state.clearance = "LEVEL 1"
         st.rerun()
     except Exception as e:
         st.error(f"❌ Login Failed: {e}")
@@ -72,117 +58,140 @@ def login_user(email, password):
 def register_user(email, password):
     try:
         response = supabase.auth.sign_up({"email": email, "password": password})
-        if response.user:
-            st.success("✅ Registration Successful! Please switch to Login tab.")
+        if response.user: st.success("✅ Success! Please Login.")
     except Exception as e:
-        st.error(f"❌ Registration Failed: {e}")
+        st.error(f"❌ Error: {e}")
 
 def logout():
     supabase.auth.sign_out()
     st.session_state.user = None
-    st.session_state.clearance = "LEVEL 1"
     st.rerun()
 
-# --- 5. 界面 A: 登录/注册页 ---
+# --- 5. 数据库读写逻辑 (V9 新增) ---
+def save_archive(title, content):
+    try:
+        data = {
+            "user_id": st.session_state.user.id,
+            "title": title if title else "Unknown Subject",
+            "content": content
+        }
+        supabase.table("archives").insert(data).execute()
+        st.toast("✅ ARCHIVE SAVED TO DATABASE", icon="💾")
+        time.sleep(1) # 给一点时间刷新
+    except Exception as e:
+        st.error(f"Save Failed: {e}")
+
+def load_archives():
+    try:
+        # 只查当前用户的记录，按时间倒序
+        response = supabase.table("archives").select("*").eq("user_id", st.session_state.user.id).order("created_at", desc=True).execute()
+        return response.data
+    except Exception as e:
+        st.error(f"Load Failed: {e}")
+        return []
+
+# --- 6. 界面 A: 登录页 ---
 if not st.session_state.user:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
-        st.markdown("<br><h1 style='text-align: center; color: #00ff41;'>☢️ VANGUARD GATEWAY</h1>", unsafe_allow_html=True)
-        st.info("⚠️ SECURE CONNECTION REQUIRED")
-        
-        tab1, tab2 = st.tabs(["🔑 LOGIN", "📝 REGISTER"])
-        
-        with tab1: # 登录
-            email_in = st.text_input("Email", key="l_email")
-            pass_in = st.text_input("Password", type="password", key="l_pass")
-            if st.button("AUTHENTICATE", type="primary", use_container_width=True):
-                login_user(email_in, pass_in)
-        
-        with tab2: # 注册
-            st.caption("New Agent Enrollment")
-            new_email = st.text_input("Enter Email", key="r_email")
-            new_pass = st.text_input("Create Password (min 6 chars)", type="password", key="r_pass")
-            if st.button("CREATE ID", use_container_width=True):
-                register_user(new_email, new_pass)
-    
-    st.stop() # 没登录就停在这里
+        st.markdown("<br><h1 style='text-align: center; color: #00ff41;'>☢️ VANGUARD SYSTEM</h1>", unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
+        with tab1:
+            e = st.text_input("Email", key="l_e")
+            p = st.text_input("Password", type="password", key="l_p")
+            if st.button("ENTER", use_container_width=True): login_user(e, p)
+        with tab2:
+            ne = st.text_input("New Email", key="r_e")
+            np = st.text_input("New Password", type="password", key="r_p")
+            if st.button("JOIN", use_container_width=True): register_user(ne, np)
+    st.stop()
 
 # ==============================================================================
-# --- 6. 界面 B: 主程序 (SaaS 核心) ---
+# --- 7. 界面 B: 主程序 (V9 双模式) ---
 # ==============================================================================
 
 # 侧边栏
 with st.sidebar:
-    st.title("☢️ COMMAND CENTER")
-    st.write(f"Agent: **{st.session_state.user.email}**")
+    st.write(f"USER: **{st.session_state.user.email}**")
     st.info(f"CLEARANCE: **{st.session_state.clearance}**")
+    if st.button("LOGOUT"): logout()
+    st.divider()
     
-    if st.button("LOGOUT"):
-        logout()
-        
-    st.markdown("---")
+    # 权限滑块
+    current_clr = st.session_state.clearance
+    if current_clr == "OMNI":
+        user_choice_clr = st.select_slider("OVERRIDE", options=["LEVEL 1", "LEVEL 2", "LEVEL 3", "OMNI"], value="OMNI")
+    else:
+        st.warning("🔒 UPGRADE REQUIRED")
+        user_choice_clr = "LEVEL 1"
+
+st.title("🗄️ CLASSIFIED DATABASE")
+
+# 核心标签页布局
+tab_gen, tab_hist = st.tabs(["📡 NEW SCAN (生成)", "📂 MY ARCHIVES (历史)"])
+
+# --- 🟢 TAB 1: 生成新内容 ---
+with tab_gen:
     doc_type = st.selectbox("ARCHIVE TYPE", ["NECROPSY REPORT", "FIELD RECORDING", "SCP PROTOCOL"])
+    user_input = st.text_area("TARGET SUBJECT:", height=80, placeholder="e.g. A mechanical shark in the desert...")
     
-    # 权限控制逻辑
-    current_clearance = st.session_state.clearance
-    
-    # 如果是 OMNI，显示滑块让他玩
-    if current_clearance == "OMNI":
-        user_choice_clearance = st.select_slider("ADMIN OVERRIDE", options=["LEVEL 1", "LEVEL 2", "LEVEL 3", "OMNI"], value="OMNI")
-    else:
-        # 如果是 LEVEL 1，锁死
-        st.warning("🔒 UPGRADE TO UNLOCK FULL ACCESS")
-        st.caption("Current Plan: Free Tier")
-        user_choice_clearance = "LEVEL 1" # 强制覆盖
+    col_btn1, col_btn2 = st.columns([1, 4])
+    with col_btn1:
+        gen_btn = st.button("INITIATE SCAN", type="primary")
 
-# 主界面
-st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
+    # 生成逻辑
+    if gen_btn and user_input:
+        genai.configure(api_key=google_key)
+        prompt = f"""
+        **ROLE**: Vanguard Mainframe. **INPUT**: "{user_input}". **MODE**: {doc_type}. **CLEARANCE**: {user_choice_clr}.
+        **CONSTRAINT**: English Only. Verbose.
+        **REDACTION**: L1/L2 redact secrets. OMNI show all.
+        **CONTENT**: HEADER, PHYSICAL, BEHAVIOR, INCIDENT, EVOLUTION, ASSETS.
+        **FORMAT**: Markdown.
+        """
+        
+        with st.spinner('PROCESSING...'):
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                res = model.generate_content(prompt)
+                
+                # 存入 Session State 防止刷新丢失
+                st.session_state.current_result = res.text
+                st.session_state.current_input = user_input
+                
+            except Exception as e:
+                st.error(f"Connection Failed: {e}")
 
-# 生成逻辑 (复用稳定版)
-if 'last_time' not in st.session_state: st.session_state.last_time = 0
-
-user_input = st.text_area("TARGET SUBJECT:", height=100)
-gen_btn = st.button("INITIATE SCAN", type="primary")
-
-def try_generate(model, prompt):
-    try:
-        m = genai.GenerativeModel(model)
-        return m.generate_content(prompt), None
-    except Exception as e:
-        return None, str(e)
-
-if gen_btn and user_input:
-    # 冷却检查
-    if time.time() - st.session_state.last_time < 2:
-        st.warning("⚠️ COOLING DOWN...")
-        st.stop()
-    st.session_state.last_time = time.time()
-
-    genai.configure(api_key=google_key)
-    
-    prompt = f"""
-    **SYSTEM ROLE**: Central mainframe of 'Vanguard'.
-    **USER INPUT**: "{user_input}"
-    **MODE**: {doc_type}
-    **CLEARANCE**: {user_choice_clearance}
-    
-    **CONSTRAINT**: OUTPUT IN ENGLISH. NO CHINESE. VERBOSE MODE.
-    **REDACTION**: 
-    - LEVEL 1/2: Describe horror but REDACT specific data/origins.
-    - OMNI: Show ALL truth.
-    
-    **CONTENT**: HEADER, PHYSICAL(Scent/Sound), BEHAVIOR, INCIDENT, EVOLUTION, ASSETS.
-    **FORMAT**: Markdown.
-    """
-
-    with st.spinner('ACCESSING DATABASE...'):
-        res, err = try_generate('gemini-1.5-flash', prompt)
-        if not res: # 如果 Flash 挂了试 Pro
-             res, err = try_generate('gemini-1.5-pro', prompt)
-
-    if res:
+    # 显示结果 & 保存按钮
+    if 'current_result' in st.session_state:
         st.markdown('<div class="warning-box">⚠️ CLEARANCE VERIFIED</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="report-container">{res.text}</div>', unsafe_allow_html=True)
-        st.download_button("💾 DOWNLOAD", res.text, "dossier.md")
+        st.markdown(f'<div class="report-container">{st.session_state.current_result}</div>', unsafe_allow_html=True)
+        
+        # 保存按钮区域
+        st.markdown("---")
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            # 点击保存，把当前内容写入 Supabase
+            if st.button("💾 SAVE TO ARCHIVES"):
+                # 用输入的前20个字做标题
+                title_preview = st.session_state.current_input[:30] + "..."
+                save_archive(title_preview, st.session_state.current_result)
+        with c2:
+            st.download_button("📥 DOWNLOAD FILE", st.session_state.current_result, "dossier.md")
+
+# --- 🟡 TAB 2: 查看历史 ---
+with tab_hist:
+    st.caption("RETRIEVING ENCRYPTED RECORDS...")
+    
+    # 每次点这个 tab 都会去数据库拉取最新列表
+    my_archives = load_archives()
+    
+    if not my_archives:
+        st.info("No records found. Generate something first!")
     else:
-        st.error("❌ CONNECTION FAILED")
+        for item in my_archives:
+            # 使用折叠框显示每一条历史
+            with st.expander(f"📄 {item['created_at'][:10]} | {item['title']}"):
+                st.markdown(f"**ID:** {item['id']}")
+                st.markdown(item['content'])
+                st.button("DELETE", key=f"del_{item['id']}", help="Feature coming in V10")
