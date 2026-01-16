@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# --- 1. 页面配置：黑客帝国风格 (V3.2 STABLE) ---
+# --- 1. 页面配置 ---
 st.set_page_config(
     page_title="VANGUARD | Xeno-Archives",
     page_icon="☢️",
@@ -46,11 +46,11 @@ st.markdown("""
 
 # --- 2. 侧边栏 ---
 with st.sidebar:
-    st.title("☢️ VANGUARD OS v3.2")
-    st.caption("SECURE TERMINAL ACCESS")
+    st.title("☢️ VANGUARD OS v3.3")
+    st.caption("POWERED BY GEMINI 3 PRO")
     st.markdown("---")
     
-    api_key = st.text_input("🔑 ACCESS KEY (Google API):", type="password")
+    api_key = st.text_input("🔑 ACCESS KEY:", type="password")
     
     st.markdown("### 📡 MISSION PARAMETERS")
     doc_type = st.selectbox("ARCHIVE TYPE", 
@@ -59,7 +59,7 @@ with st.sidebar:
     clearance = st.select_slider("SECURITY CLEARANCE", options=["LEVEL 1", "LEVEL 2", "LEVEL 3", "OMNI-CLASSIFIED"])
     
     st.markdown("---")
-    st.code("STATUS: CONNECTED\nLATENCY: 12ms\nENCRYPTION: AES-256", language="text")
+    st.code("STATUS: CONNECTED\nMODEL: GEMINI-3-PRO\nENCRYPTION: AES-256", language="text")
 
 # --- 3. 主界面 ---
 st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
@@ -74,14 +74,13 @@ if generate_btn and user_input and api_key:
     genai.configure(api_key=api_key)
     
     try:
-        # 🟢 修复点：使用 'gemini-1.5-flash'，这是目前最通用的版本
-        # 如果这个也报错，下方的 except 代码块会自动帮你查找可用的模型
-        model = genai.GenerativeModel('gemini-1.5-flash') 
+        # 🟢 关键修改：使用了你列表中的 Gemini 3 Pro 模型
+        model = genai.GenerativeModel('gemini-3-pro-preview') 
         
         # 🟢 模拟黑客解密动画
         status_text = st.empty()
         progress_bar = st.progress(0)
-        logs = ["Handshaking with Vanguard Server...", "Bypassing Firewall Layer 7...", "Decrypting Bio-Signature...", "Compiling Final Dossier..."]
+        logs = ["Handshaking with Vanguard Server...", "Allocating Tensor Processing Units...", "Decrypting Bio-Signature...", "Compiling Final Dossier..."]
         
         for i, log in enumerate(logs):
             status_text.code(f">_ {log}")
@@ -93,7 +92,7 @@ if generate_btn and user_input and api_key:
         
         # --- 🧠 Prompt Engineering ---
         base_rules = f"""
-        **SYSTEM ROLE**: Central computer of secret org 'Vanguard'.
+        **SYSTEM ROLE**: You are the central computer of a secret paranormal organization 'Vanguard'.
         **USER INPUT**: "{user_input}"
         **SECURITY**: {clearance}
         **OUTPUT**: Markdown. 
@@ -125,16 +124,14 @@ if generate_btn and user_input and api_key:
         st.download_button("💾 DOWNLOAD ENCRYPTED FILE", response.text, "vanguard_dossier.md")
 
     except Exception as e:
-        # 🔴 自动诊断逻辑：如果出错，打印错误并尝试列出可用模型
-        st.error(f"❌ CONNECTION ERROR: {e}")
-        st.warning("⚠️ 正在尝试自动诊断可用模型，请查看下方列表：")
+        # 如果连 3 Pro 都报错，自动降级到 2.5 Flash
         try:
-            st.write("您的 API Key 支持以下模型（请将其中一个名字告诉开发者）：")
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    st.code(m.name)
+             st.warning("⚠️ Gemini 3 Pro busy, rerouting to backup node (Gemini 2.5)...")
+             model = genai.GenerativeModel('gemini-2.5-flash')
+             response = model.generate_content(prompt)
+             st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
         except:
-            st.error("无法连接 Google 服务器。请检查您的网络或 API Key 是否正确。")
+             st.error(f"❌ CRITICAL ERROR: {e}")
 
 elif generate_btn and not api_key:
     st.error("⛔ ACCESS DENIED: Please enter your API Key in the sidebar.")
