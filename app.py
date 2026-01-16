@@ -41,11 +41,8 @@ st.markdown("""
 # --- 3. 安全获取 Key ---
 try:
     my_secret_key = st.secrets["GOOGLE_API_KEY"]
-except FileNotFoundError:
+except:
     st.error("⛔ SYSTEM ERROR: Secrets not configured.")
-    st.stop()
-except KeyError:
-    st.error("⛔ SYSTEM ERROR: 'GOOGLE_API_KEY' not found in Secrets.")
     st.stop()
 
 # --- 4. 商业逻辑 ---
@@ -57,7 +54,7 @@ if 'last_request_time' not in st.session_state:
 # --- 5. 侧边栏 ---
 with st.sidebar:
     st.title("☢️ VANGUARD PRO")
-    st.caption("US-GOV SECURE TERMINAL")
+    st.caption("FAILSAFE SYSTEM: ONLINE")
     st.markdown("---")
     
     user_code = st.text_input("🔑 ENTER ACCESS CODE:", type="password")
@@ -73,81 +70,103 @@ with st.sidebar:
         access_granted = False
         
     st.markdown("---")
-    
-    doc_type = st.selectbox("ARCHIVE TYPE", 
-        ["NECROPSY REPORT", "RECOVERED AUDIO", "SCP PROTOCOL"])
-    
-    clearance = st.select_slider("SECURITY CLEARANCE", 
-        options=["LEVEL 1 (Public)", "LEVEL 2 (Restricted)", "LEVEL 3 (Secret)", "OMNI (Eyes Only)"])
-    
-    st.caption(f"Clearance Status: {clearance}")
+    doc_type = st.selectbox("ARCHIVE TYPE", ["NECROPSY REPORT", "RECOVERED AUDIO", "SCP PROTOCOL"])
+    clearance = st.select_slider("SECURITY CLEARANCE", options=["LEVEL 1", "LEVEL 2", "LEVEL 3", "OMNI"])
 
 # --- 6. 主界面 ---
 st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
 
 if not access_granted:
-    st.warning("⚠️ UNAUTHORIZED PERSONNEL")
-    st.markdown("Access restricted. Please enter Access Code.")
+    st.warning("⚠️ RESTRICTED ACCESS")
     st.stop()
 
-st.markdown("**INSTRUCTION:** Enter entity description (Chinese accepted). Output will be English.")
+st.markdown("**INSTRUCTION:** Enter description (Chinese accepted). System will auto-translate.")
 user_input = st.text_area("TARGET SUBJECT:", height=100)
 generate_btn = st.button("INITIATE RETRIEVAL", type="primary")
 
-# --- 7. 核心生成逻辑 ---
+# --- 7. 核心逻辑：自动漫游模型 ---
+def try_generate(model_name, prompt):
+    """尝试使用指定模型生成，如果失败返回错误信息"""
+    try:
+        model = genai.GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        return response, None # 成功
+    except Exception as e:
+        return None, str(e) # 失败
+
 if generate_btn and user_input:
     
-    current_time = time.time()
-    if current_time - st.session_state.last_request_time < 5:
-        st.warning("⚠️ TERMINAL BUSY. STANDBY...")
-        st.stop()
-    st.session_state.last_request_time = current_time
-
+    # 稍微冷却一下 (3秒)
+    time.sleep(1) 
+    
     genai.configure(api_key=my_secret_key)
     
-    try:
-        # 🟢 修复点：使用你列表里明确存在的 'gemini-2.0-flash'
-        model = genai.GenerativeModel('gemini-2.0-flash') 
-        
-        with st.spinner('TRANSLATING & DECRYPTING...'):
-            
-            prompt = f"""
-            **SYSTEM ROLE**: You are the central mainframe of 'Vanguard'.
-            **USER INPUT**: "{user_input}"
-            **MODE**: {doc_type}
-            **CLEARANCE**: {clearance}
-            
-            **🚫 LANGUAGE CONSTRAINT**: 
-            - **OUTPUT MUST BE 100% IN NATIVE ENGLISH**.
-            - No Chinese characters in the report.
-            
-            **🕵️ REDACTION RULES**:
-            - If Clearance is 'LEVEL 1' or 'LEVEL 2': Hide sensitive info with '████'.
-            - If 'OMNI': Show FULL TRUTH.
-            
-            **📄 CONTENT**:
-            1. **HEADER**: ID, Date, Location.
-            2. **MAIN DOSSIER**: Hard sci-fi tone, specific data.
-            3. **🧬 EVOLUTION**: 2 theoretical mutations.
-            4. **🎒 ASSETS**: Loot drops & Adventure Hook.
-            
-            **FORMAT**: Markdown.
-            """
-            
-            response = model.generate_content(prompt)
-            
-            st.markdown('<div class="warning-box">⚠️ TOP SECRET // NOFORN</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
-            st.download_button("💾 DOWNLOAD FILE", response.text, "vanguard_report.md")
+    # 🟢 备选模型列表（按优先级排序）
+    # 1. Flash Latest (通常最稳，额度最高)
+    # 2. Gemini 2.0 Flash (最新，但容易限速)
+    # 3. Gemini Pro (保底)
+    model_list = [
+        'gemini-flash-latest', 
+        'gemini-2.0-flash', 
+        'gemini-1.5-flash-latest',
+        'gemini-pro'
+    ]
+    
+    success = False
+    final_response = None
+    
+    # 构建 Prompt
+    prompt = f"""
+    **SYSTEM ROLE**: Central mainframe of 'Vanguard'.
+    **USER INPUT**: "{user_input}"
+    **MODE**: {doc_type}
+    **CLEARANCE**: {clearance}
+    
+    **CONSTRAINT**: 
+    - OUTPUT MUST BE 100% IN NATIVE ENGLISH. 
+    - No Chinese in output.
+    
+    **REDACTION**:
+    - If Clearance is LEVEL 1/2: Hide sensitive data with '████'.
+    - If OMNI: Show ALL.
+    
+    **CONTENT**:
+    1. HEADER (ID, Date, Loc)
+    2. MAIN DOSSIER (Sci-Fi Tone, Metrics)
+    3. 🧬 EVOLUTION (2 stages)
+    4. 🎒 ASSETS (Loot & Hook)
+    """
 
-    except Exception as e:
-        st.error(f"❌ SYSTEM FAILURE: {e}")
-        # 如果 2.0 还不行，自动尝试备用方案
-        if "404" in str(e):
-             st.info("⚠️ 尝试自动切换到备用线路 (gemini-flash-latest)...")
-             try:
-                 model = genai.GenerativeModel('gemini-flash-latest')
-                 response = model.generate_content(prompt)
-                 st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
-             except:
-                 st.error("备用线路也无法连接。请检查 API Key 权限。")
+    with st.spinner('SEARCHING AVAILABLE NEURAL LINKS...'):
+        # 循环尝试模型
+        for model_name in model_list:
+            status_placeholder = st.empty()
+            status_placeholder.caption(f"Trying connection node: {model_name}...")
+            
+            response, error = try_generate(model_name, prompt)
+            
+            if response:
+                final_response = response
+                success = True
+                status_placeholder.success(f"Connected via {model_name}")
+                time.sleep(0.5)
+                status_placeholder.empty()
+                break # 成功了就跳出循环
+            else:
+                # 如果是 429 (限速)，打印警告并继续尝试下一个
+                if "429" in error:
+                    st.warning(f"⚠️ Node {model_name} busy (Rate Limit). Rerouting...")
+                # 如果是 404 (找不到)，继续下一个
+                elif "404" in error:
+                    st.warning(f"⚠️ Node {model_name} offline. Rerouting...")
+                else:
+                    st.error(f"⚠️ Node {model_name} failed: {error}")
+    
+    # 结果展示
+    if success and final_response:
+        st.markdown('<div class="warning-box">⚠️ TOP SECRET // NOFORN</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="report-container">{final_response.text}</div>', unsafe_allow_html=True)
+        st.download_button("💾 DOWNLOAD FILE", final_response.text, "vanguard_report.md")
+    else:
+        st.error("❌ ALL NODES FAILED. Please wait 1 minute and try again.")
+        st.caption("系统繁忙，所有模型都在冷却中。请稍等片刻。")
