@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 注入 CSS：黑底绿字，CRT 显示器风格
+# 注入 CSS：黑底绿字
 st.markdown("""
 <style>
     .stApp { background-color: #0e1117; }
@@ -46,8 +46,8 @@ st.markdown("""
 
 # --- 2. 侧边栏 ---
 with st.sidebar:
-    st.title("☢️ VANGUARD OS v3.3")
-    st.caption("POWERED BY GEMINI 3 PRO")
+    st.title("☢️ VANGUARD OS v3.4")
+    st.caption("CORE: GEMINI FLASH (STABLE)")
     st.markdown("---")
     
     api_key = st.text_input("🔑 ACCESS KEY:", type="password")
@@ -59,7 +59,7 @@ with st.sidebar:
     clearance = st.select_slider("SECURITY CLEARANCE", options=["LEVEL 1", "LEVEL 2", "LEVEL 3", "OMNI-CLASSIFIED"])
     
     st.markdown("---")
-    st.code("STATUS: CONNECTED\nMODEL: GEMINI-3-PRO\nENCRYPTION: AES-256", language="text")
+    st.code("STATUS: ONLINE\nQUOTA: UNLIMITED\nENCRYPTION: AES-256", language="text")
 
 # --- 3. 主界面 ---
 st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
@@ -74,18 +74,19 @@ if generate_btn and user_input and api_key:
     genai.configure(api_key=api_key)
     
     try:
-        # 🟢 关键修改：使用了你列表中的 Gemini 3 Pro 模型
-        model = genai.GenerativeModel('gemini-3-pro-preview') 
+        # 🟢 修复点：使用你列表中最稳、额度最高的 'gemini-flash-latest'
+        # 这个模型每分钟允许请求 15 次以上，几乎不会报错
+        model = genai.GenerativeModel('gemini-flash-latest') 
         
         # 🟢 模拟黑客解密动画
         status_text = st.empty()
         progress_bar = st.progress(0)
-        logs = ["Handshaking with Vanguard Server...", "Allocating Tensor Processing Units...", "Decrypting Bio-Signature...", "Compiling Final Dossier..."]
+        logs = ["Rerouting to High-Speed Node...", "Bypassing Firewall...", "Decrypting Bio-Signature...", "Compiling Final Dossier..."]
         
         for i, log in enumerate(logs):
             status_text.code(f">_ {log}")
             progress_bar.progress((i + 1) * 25)
-            time.sleep(0.2)
+            time.sleep(0.1) # 加快一点速度
             
         status_text.empty()
         progress_bar.empty()
@@ -124,14 +125,10 @@ if generate_btn and user_input and api_key:
         st.download_button("💾 DOWNLOAD ENCRYPTED FILE", response.text, "vanguard_dossier.md")
 
     except Exception as e:
-        # 如果连 3 Pro 都报错，自动降级到 2.5 Flash
-        try:
-             st.warning("⚠️ Gemini 3 Pro busy, rerouting to backup node (Gemini 2.5)...")
-             model = genai.GenerativeModel('gemini-2.5-flash')
-             response = model.generate_content(prompt)
-             st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
-        except:
-             st.error(f"❌ CRITICAL ERROR: {e}")
+        # 如果还是报错，说明你需要休息1分钟
+        st.error(f"❌ OVERLOAD: {e}")
+        if "429" in str(e):
+            st.warning("⚠️ 系统过热（配额耗尽）。请喝口水，等待 60 秒后再试，Google 会自动重置你的免费额度。")
 
 elif generate_btn and not api_key:
     st.error("⛔ ACCESS DENIED: Please enter your API Key in the sidebar.")
