@@ -2,144 +2,165 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# --- 1. 页面与CSS配置 ---
-st.set_page_config(page_title="VANGUARD | Xeno-Archives", page_icon="☢️", layout="wide")
+# --- 1. 页面基础配置 ---
+st.set_page_config(
+    page_title="VANGUARD | Xeno-Archives",
+    page_icon="☢️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# CSS: 增加了蓝色和黄色的特殊区域，用于显示“进化”和“战利品”
+# --- 2. 注入 CSS 样式 (黑客终端风格) ---
 st.markdown("""
 <style>
+    /* 全局背景色 */
     .stApp { background-color: #0e1117; }
     
-    /* 核心报告：黑底绿字 */
+    /* 核心报告容器：黑底绿字 */
     .report-container {
         font-family: 'Courier New', Courier, monospace;
         color: #33ff00;
         background-color: #000000;
         padding: 25px;
         border: 1px solid #33ff00;
-        box-shadow: 0 0 10px rgba(51, 255, 0, 0.1);
-        margin-bottom: 20px;
+        box-shadow: 0 0 15px rgba(51, 255, 0, 0.2);
+        border-radius: 5px;
+        line-height: 1.6;
+        margin-top: 20px;
     }
     
-    /* 扩展模块：进化潜力 (蓝青色风格) */
-    .evo-box {
-        font-family: 'Courier New', Courier, monospace;
-        color: #00e5ff;
-        background-color: #001a20;
-        padding: 15px;
-        border-left: 5px solid #00e5ff;
-        margin-top: 10px;
+    /* 警告框 */
+    .warning-box {
+        background-color: #330000;
+        color: #ff3333;
+        padding: 10px;
+        border: 1px solid #ff0000;
+        text-align: center;
+        font-weight: bold;
+        letter-spacing: 2px;
+        margin-bottom: 20px;
     }
-
-    /* 扩展模块：战利品 (琥珀色风格) */
-    .loot-box {
-        font-family: 'Courier New', Courier, monospace;
-        color: #ffcc00;
-        background-color: #1a1500;
-        padding: 15px;
-        border-left: 5px solid #ffcc00;
-        margin-top: 10px;
-    }
-
-    .warning-text { color: red; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 逻辑设置 ---
+# --- 3. 安全获取 API Key (只从 Secrets 读取) ---
+try:
+    # 这一行是连接你后台保险箱的唯一通道
+    my_secret_key = st.secrets["GOOGLE_API_KEY"]
+except FileNotFoundError:
+    st.error("⛔ 严重错误：未检测到 Secrets 配置。请回到 Streamlit 后台设置。")
+    st.stop()
+except KeyError:
+    st.error("⛔ 严重错误：Secrets 中找不到 'GOOGLE_API_KEY' 这个名字。请检查拼写。")
+    st.stop()
+
+# --- 4. 商业逻辑：访问密码库 ---
+# 只有输入这些密码的用户才能使用 (未来你可以把这里改成数据库查询)
+VALID_ACCESS_CODES = ["HUNTER-2026", "VIP-8888", "TEST-FREE"]
+
+# 初始化防刷计时器
 if 'last_request_time' not in st.session_state:
     st.session_state.last_request_time = 0
 
-# 模拟密码库
-VALID_ACCESS_CODES = ["HUNTER-2026", "VIP-8888", "TEST-FREE"]
-
-# 获取 API Key
-try:
-    my_secret_key = st.secrets["GOOGLE_API_KEY"]
-except:
-    my_secret_key = None
-
-# --- 3. 侧边栏 ---
+# --- 5. 侧边栏设计 ---
 with st.sidebar:
-    st.title("☢️ VANGUARD V5.0")
-    st.caption("FULL CAMPAIGN MODE")
+    st.title("☢️ VANGUARD PRO")
+    st.caption("SECURE TERMINAL ACCESS")
     st.markdown("---")
     
+    # 密码输入框
     user_code = st.text_input("🔑 ENTER ACCESS CODE:", type="password")
     
+    # 验证逻辑
     if user_code in VALID_ACCESS_CODES:
         st.success("✅ ACCESS GRANTED")
+        st.caption("PLAN: UNLIMITED")
         access_granted = True
+    elif user_code:
+        st.error("⛔ INVALID CODE")
+        st.caption("Please purchase a key.")
+        access_granted = False
     else:
         st.info("🔒 SYSTEM LOCKED")
         access_granted = False
         
     st.markdown("---")
-    doc_type = st.selectbox("ARCHIVE TYPE", ["NECROPSY_REPORT", "AUDIO_TRANSCRIPT", "CONTAINMENT_PROTOCOL"])
-    clearance = st.select_slider("CLEARANCE", options=["L1", "L2", "L3", "OMNI"])
+    
+    # 功能菜单
+    st.markdown("### 📡 MISSION PARAMETERS")
+    doc_type = st.selectbox("ARCHIVE TYPE", 
+        ["NECROPSY_REPORT (尸检报告)", "AUDIO_TRANSCRIPT (录音记录)", "CONTAINMENT_PROTOCOL (收容协议)"])
+    
+    # 权限滑块 (影响是否打码)
+    clearance = st.select_slider("SECURITY CLEARANCE", 
+        options=["L1 (Restricted)", "L2 (Confidential)", "L3 (Secret)", "OMNI (Top Secret)"])
+    st.caption(f"Current Clearance: {clearance}")
 
-# --- 4. 主界面 ---
+# --- 6. 主界面逻辑 ---
 st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
 
+# 如果没输对密码，直接停止运行
 if not access_granted:
-    st.warning("Please purchase Access Code to unlock terminal.")
+    st.warning("⚠️ SECURITY LOCKDOWN ACTIVE")
+    st.markdown("### RESTRICTED ACCESS")
+    st.markdown("Please verify your identity via the sidebar terminal.")
     st.stop()
 
-user_input = st.text_area("TARGET DESCRIPTION:", height=100)
-generate_btn = st.button("INITIATE PROTOCOL", type="primary")
+# 用户输入区
+st.markdown("**INSTRUCTION:** Enter target entity description to retrieve secure documentation.")
+user_input = st.text_area("TARGET DESCRIPTION (e.g., Deep-sea worm mimicking voices):", height=100)
+generate_btn = st.button("INITIATE RETRIEVAL PROTOCOL", type="primary")
 
+# --- 7. 生成核心逻辑 ---
 if generate_btn and user_input:
-    # 防刷冷却 (10秒)
+    
+    # A. 防刷检查 (冷却时间 5 秒)
     current_time = time.time()
-    if current_time - st.session_state.last_request_time < 10:
-        st.error(f"⚠️ SYSTEM OVERHEAT: Please wait {10 - int(current_time - st.session_state.last_request_time)}s.")
+    time_diff = current_time - st.session_state.last_request_time
+    if time_diff < 5:
+        st.warning(f"⚠️ SYSTEM COOLING DOWN... Please wait {5 - int(time_diff)} seconds.")
         st.stop()
     st.session_state.last_request_time = current_time
 
-    if not my_secret_key:
-        st.error("Admin Key Error")
-        st.stop()
-
+    # B. 配置 API
     genai.configure(api_key=my_secret_key)
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 使用最稳健的 Flash 模型
+        model = genai.GenerativeModel('gemini-1.5-flash') 
         
-        with st.spinner('ANALYZING EVOLUTIONARY TRAJECTORIES...'):
-            # --- 🧠 V5.0 Prompt: 增加了两个必须的扩展板块 ---
+        with st.spinner(f'DECRYPTING LEVEL [{clearance}] FILES...'):
+            
+            # --- C. 终极 Prompt 工程 ---
             prompt = f"""
             **ROLE**: Central computer of secret org 'Vanguard'.
             **USER INPUT**: "{user_input}"
             **MODE**: {doc_type}
+            **USER CLEARANCE**: {clearance}
             
-            **TASK 1: MAIN REPORT (The Core)**
-            - Write a creative, horror-sci-fi style report.
-            - Include specific data (metrics, dimensions).
-            - Output format: HTML compatible Markdown.
+            **CRITICAL RULES**:
+            1. **REDACTION**: If Clearance is 'L1' or 'L2', you MUST hide sensitive data (dates, locations, death counts, true origins) using black bars '████'. If 'OMNI', show everything.
+            2. **TONE**: Horror, Sci-Fi, Clinical, Professional.
+            3. **FORMAT**: Markdown.
             
-            **TASK 2: EVOLUTIONARY POTENTIAL (The Twist)**
-            - Create a section titled "🧬 PROJECTED METAMORPHOSIS".
-            - Describe 2 possible future forms if the entity is not contained (e.g., "If exposed to radiation, it grows wings").
-            - Describe a "Trigger Event" that causes this change.
+            **STRUCTURE**:
+            1. **MAIN REPORT**: The core documentation with specific metrics (Size, Weight, Toxicity).
+            2. **🧬 PROJECTED METAMORPHOSIS**: A section describing 2 future evolutionary stages if not contained.
+            3. **🎒 RECOVERABLE ASSETS**: A section listing "Loot Drops" (organs/items) and 1 "Plot Hook" for adventurers.
             
-            **TASK 3: ASSETS & HOOKS (The Loot)**
-            - Create a section titled "🎒 RECOVERABLE ASSETS".
-            - List 2-3 specific "Loot Drops" (organs/items) and what they can be used for (e.g., "Acid Gland: Can be crafted into corrosive ammo").
-            - List 1 "Plot Hook" (e.g., "Rumor has it this creature guards a sunken submarine").
-            
-            **MANDATORY**: End with 'TRANSLATED SUMMARY' in Chinese.
+            **MANDATORY**: End with a section called 'TRANSLATED SUMMARY' in Chinese (中文简报).
             """
             
+            # D. 发送请求
             response = model.generate_content(prompt)
             
-            # --- 解析与展示 (简单的文本分割，为了分别套用样式) ---
-            # 这里我们让 AI 把所有内容生成在一块，然后我们用不同的 CSS 框把它包起来
-            # 为了简化代码，我们将整个回答放入主框，但通过 Prompt 要求 AI 使用特定的标题
-            # 这样用户阅读时会有很好的分层感
-            
+            # E. 展示结果
+            st.markdown('<div class="warning-box">⚠️ CLASSIFIED MATERIAL - DO NOT DISTRIBUTE</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
             
-            # 额外的视觉提示
-            st.info("💡 TIP: The 'Projected Metamorphosis' data is theoretical. Proceed with caution.")
+            # F. 下载按钮
+            st.download_button("💾 DOWNLOAD DOSSIER", response.text, "vanguard_file.md")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"❌ SYSTEM ERROR: {e}")
+        st.caption("Please contact administrator if error persists.")
