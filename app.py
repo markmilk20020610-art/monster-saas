@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# --- 1. 页面基础配置 ---
+# --- 1. 页面配置 ---
 st.set_page_config(
     page_title="VANGUARD | Xeno-Archives",
     page_icon="☢️",
@@ -10,23 +10,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. 注入 CSS 样式 (黑客终端风格) ---
+# --- 2. 样式：纯美式军方终端风格 ---
 st.markdown("""
 <style>
-    /* 全局背景色 */
+    /* 全局背景色：深黑 */
     .stApp { background-color: #0e1117; }
     
-    /* 核心报告容器：黑底绿字 */
+    /* 核心报告容器：黑底绿字，CRT显示器风格 */
     .report-container {
         font-family: 'Courier New', Courier, monospace;
         color: #33ff00;
         background-color: #000000;
-        padding: 25px;
+        padding: 30px;
         border: 1px solid #33ff00;
-        box-shadow: 0 0 15px rgba(51, 255, 0, 0.2);
-        border-radius: 5px;
-        line-height: 1.6;
+        box-shadow: 0 0 20px rgba(51, 255, 0, 0.15);
         margin-top: 20px;
+        border-radius: 5px;
     }
     
     /* 警告框 */
@@ -37,88 +36,90 @@ st.markdown("""
         border: 1px solid #ff0000;
         text-align: center;
         font-weight: bold;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
         margin-bottom: 20px;
     }
+    
+    /* 小标题高亮 */
+    h1, h2, h3 { color: #33ff00 !important; font-family: 'Courier New'; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 安全获取 API Key (只从 Secrets 读取) ---
+# --- 3. 安全获取 API Key (从 Secrets 读取) ---
 try:
-    # 这一行是连接你后台保险箱的唯一通道
     my_secret_key = st.secrets["GOOGLE_API_KEY"]
 except FileNotFoundError:
-    st.error("⛔ 严重错误：未检测到 Secrets 配置。请回到 Streamlit 后台设置。")
+    st.error("⛔ SYSTEM ERROR: Secrets not configured. Please check Streamlit settings.")
     st.stop()
 except KeyError:
-    st.error("⛔ 严重错误：Secrets 中找不到 'GOOGLE_API_KEY' 这个名字。请检查拼写。")
+    st.error("⛔ SYSTEM ERROR: 'GOOGLE_API_KEY' not found in Secrets.")
     st.stop()
 
-# --- 4. 商业逻辑：访问密码库 ---
-# 只有输入这些密码的用户才能使用 (未来你可以把这里改成数据库查询)
+# --- 4. 商业逻辑：密码库 ---
+# 在这里定义你的“售卖密码”
 VALID_ACCESS_CODES = ["HUNTER-2026", "VIP-8888", "TEST-FREE"]
 
 # 初始化防刷计时器
 if 'last_request_time' not in st.session_state:
     st.session_state.last_request_time = 0
 
-# --- 5. 侧边栏设计 ---
+# --- 5. 侧边栏 (全英文界面 - 模拟美军终端) ---
 with st.sidebar:
     st.title("☢️ VANGUARD PRO")
-    st.caption("SECURE TERMINAL ACCESS")
+    st.caption("US-GOV SECURE TERMINAL")
     st.markdown("---")
     
-    # 密码输入框
+    # 密码输入
     user_code = st.text_input("🔑 ENTER ACCESS CODE:", type="password")
     
     # 验证逻辑
     if user_code in VALID_ACCESS_CODES:
         st.success("✅ ACCESS GRANTED")
-        st.caption("PLAN: UNLIMITED")
+        st.caption("STATUS: ACTIVE AGENT")
         access_granted = True
     elif user_code:
         st.error("⛔ INVALID CODE")
-        st.caption("Please purchase a key.")
         access_granted = False
     else:
-        st.info("🔒 SYSTEM LOCKED")
+        st.info("🔒 AUTHENTICATION REQUIRED")
         access_granted = False
         
     st.markdown("---")
     
-    # 功能菜单
-    st.markdown("### 📡 MISSION PARAMETERS")
+    # 功能菜单 (英文)
     doc_type = st.selectbox("ARCHIVE TYPE", 
-        ["NECROPSY_REPORT (尸检报告)", "AUDIO_TRANSCRIPT (录音记录)", "CONTAINMENT_PROTOCOL (收容协议)"])
+        ["NECROPSY REPORT", "RECOVERED AUDIO", "SCP PROTOCOL"])
     
-    # 权限滑块 (影响是否打码)
+    # 权限滑块
     clearance = st.select_slider("SECURITY CLEARANCE", 
-        options=["L1 (Restricted)", "L2 (Confidential)", "L3 (Secret)", "OMNI (Top Secret)"])
-    st.caption(f"Current Clearance: {clearance}")
+        options=["LEVEL 1 (Public)", "LEVEL 2 (Restricted)", "LEVEL 3 (Secret)", "OMNI (Eyes Only)"])
+    
+    st.caption(f"Clearance Status: {clearance}")
 
-# --- 6. 主界面逻辑 ---
+# --- 6. 主界面 ---
 st.title("🗄️ CLASSIFIED XENO-ARCHIVES")
 
-# 如果没输对密码，直接停止运行
+# 未解锁状态
 if not access_granted:
-    st.warning("⚠️ SECURITY LOCKDOWN ACTIVE")
-    st.markdown("### RESTRICTED ACCESS")
-    st.markdown("Please verify your identity via the sidebar terminal.")
+    st.warning("⚠️ UNAUTHORIZED PERSONNEL")
+    st.markdown("Access to this terminal is restricted to Vanguard Agents.")
+    st.markdown("Please enter your Access Code in the sidebar.")
     st.stop()
 
-# 用户输入区
-st.markdown("**INSTRUCTION:** Enter target entity description to retrieve secure documentation.")
-user_input = st.text_area("TARGET DESCRIPTION (e.g., Deep-sea worm mimicking voices):", height=100)
-generate_btn = st.button("INITIATE RETRIEVAL PROTOCOL", type="primary")
+# 解锁后显示输入框
+st.markdown("**INSTRUCTION:** Enter entity description (Chinese or English accepted). Output will be in English.")
+user_input = st.text_area("TARGET SUBJECT:", height=100)
+generate_btn = st.button("INITIATE RETRIEVAL", type="primary")
 
-# --- 7. 生成核心逻辑 ---
+# --- 7. 核心生成逻辑 ---
 if generate_btn and user_input:
     
     # A. 防刷检查 (冷却时间 5 秒)
     current_time = time.time()
     time_diff = current_time - st.session_state.last_request_time
     if time_diff < 5:
-        st.warning(f"⚠️ SYSTEM COOLING DOWN... Please wait {5 - int(time_diff)} seconds.")
+        st.warning("⚠️ TERMINAL BUSY. STANDBY...")
         st.stop()
     st.session_state.last_request_time = current_time
 
@@ -126,41 +127,51 @@ if generate_btn and user_input:
     genai.configure(api_key=my_secret_key)
     
     try:
-        # 使用最稳健的 Flash 模型
+        # 使用 Flash 模型 (速度快、成本低)
         model = genai.GenerativeModel('gemini-1.5-flash') 
         
-        with st.spinner(f'DECRYPTING LEVEL [{clearance}] FILES...'):
+        with st.spinner('TRANSLATING & DECRYPTING...'):
             
-            # --- C. 终极 Prompt 工程 ---
+            # --- 🧠 V6.1 Prompt: 中文输入 -> 英文硬核输出 ---
             prompt = f"""
-            **ROLE**: Central computer of secret org 'Vanguard'.
+            **SYSTEM ROLE**: You are the central mainframe of 'Vanguard', a top-secret US paranormal research organization.
             **USER INPUT**: "{user_input}"
             **MODE**: {doc_type}
-            **USER CLEARANCE**: {clearance}
+            **CLEARANCE**: {clearance}
             
-            **CRITICAL RULES**:
-            1. **REDACTION**: If Clearance is 'L1' or 'L2', you MUST hide sensitive data (dates, locations, death counts, true origins) using black bars '████'. If 'OMNI', show everything.
-            2. **TONE**: Horror, Sci-Fi, Clinical, Professional.
-            3. **FORMAT**: Markdown.
+            **🚫 LANGUAGE CONSTRAINT (CRITICAL)**: 
+            - Regardless of whether the User Input is in Chinese, Spanish, or English, **THE OUTPUT MUST BE 100% IN NATIVE, HIGH-LEVEL ENGLISH**.
+            - Do not include any Chinese characters in the final report.
+            - Adapt Chinese concepts into Western Sci-Fi/Horror terms (e.g., "僵尸" -> "Reanimated Necrotic Host").
             
-            **STRUCTURE**:
-            1. **MAIN REPORT**: The core documentation with specific metrics (Size, Weight, Toxicity).
-            2. **🧬 PROJECTED METAMORPHOSIS**: A section describing 2 future evolutionary stages if not contained.
-            3. **🎒 RECOVERABLE ASSETS**: A section listing "Loot Drops" (organs/items) and 1 "Plot Hook" for adventurers.
+            **🕵️ REDACTION RULES**:
+            - If Clearance is 'LEVEL 1' or 'LEVEL 2': You MUST hide sensitive info (specific dates, exact locations, casualty numbers, origin theories) using black bars like '████'.
+            - If 'OMNI': Show FULL TRUTH. No censorship.
             
-            **MANDATORY**: End with a section called 'TRANSLATED SUMMARY' in Chinese (中文简报).
+            **📄 CONTENT STRUCTURE**:
+            1. **HEADER**: ID Code, Date (2026), Location.
+            2. **MAIN DOSSIER**: 
+               - Use hard sci-fi terminology (e.g., "bio-luminescent", "necrotic tissue", "gamma radiation").
+               - Include specific data tables (Height, Weight, Toxicity, Threat Level).
+            3. **🧬 EVOLUTIONARY PROJECTION**: 
+               - Describe 2 theoretical mutations/stages if the entity is not contained.
+            4. **🎒 ASSET RECOVERY**: 
+               - List "Loot Drops" (organs/tech that can be harvested).
+               - List 1 "Adventure Hook" (a rumor or mission idea for field agents).
+            
+            **TONE**: Cold, Clinical, Lovecraftian Horror.
+            **FORMAT**: Markdown.
             """
             
-            # D. 发送请求
+            # C. 发送请求
             response = model.generate_content(prompt)
             
-            # E. 展示结果
-            st.markdown('<div class="warning-box">⚠️ CLASSIFIED MATERIAL - DO NOT DISTRIBUTE</div>', unsafe_allow_html=True)
+            # D. 展示结果
+            st.markdown('<div class="warning-box">⚠️ TOP SECRET // NOFORN</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
             
-            # F. 下载按钮
-            st.download_button("💾 DOWNLOAD DOSSIER", response.text, "vanguard_file.md")
+            # E. 下载按钮
+            st.download_button("💾 DOWNLOAD FILE", response.text, "vanguard_report.md")
 
     except Exception as e:
-        st.error(f"❌ SYSTEM ERROR: {e}")
-        st.caption("Please contact administrator if error persists.")
+        st.error(f"❌ SYSTEM FAILURE: {e}")
