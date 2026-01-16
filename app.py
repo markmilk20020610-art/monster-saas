@@ -54,7 +54,7 @@ if 'last_request_time' not in st.session_state:
 # --- 5. 侧边栏 ---
 with st.sidebar:
     st.title("☢️ VANGUARD PRO")
-    st.caption("FAILSAFE SYSTEM: ONLINE")
+    st.caption("NETWORK STATUS: RECOVERING")
     st.markdown("---")
     
     user_code = st.text_input("🔑 ENTER ACCESS CODE:", type="password")
@@ -84,32 +84,30 @@ st.markdown("**INSTRUCTION:** Enter description (Chinese accepted). System will 
 user_input = st.text_area("TARGET SUBJECT:", height=100)
 generate_btn = st.button("INITIATE RETRIEVAL", type="primary")
 
-# --- 7. 核心逻辑：自动漫游模型 ---
+# --- 7. 核心逻辑：更稳健的模型漫游 ---
 def try_generate(model_name, prompt):
-    """尝试使用指定模型生成，如果失败返回错误信息"""
     try:
         model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
-        return response, None # 成功
+        return response, None
     except Exception as e:
-        return None, str(e) # 失败
+        return None, str(e)
 
 if generate_btn and user_input:
     
-    # 稍微冷却一下 (3秒)
-    time.sleep(1) 
+    # 强制休息 2 秒，防止连续点击
+    time.sleep(2) 
     
     genai.configure(api_key=my_secret_key)
     
-    # 🟢 备选模型列表（按优先级排序）
-    # 1. Flash Latest (通常最稳，额度最高)
-    # 2. Gemini 2.0 Flash (最新，但容易限速)
-    # 3. Gemini Pro (保底)
+    # 🟢 修正后的模型列表（只用最标准的正式版名字）
+    # 1. gemini-1.5-flash (目前的绝对主力，别用 latest 后缀)
+    # 2. gemini-1.5-flash-8b (小模型，速度极快，防封备用)
+    # 3. gemini-1.5-pro (高级版，作为最后手段)
     model_list = [
-        'gemini-flash-latest', 
-        'gemini-2.0-flash', 
-        'gemini-1.5-flash-latest',
-        'gemini-pro'
+        'gemini-1.5-flash',     
+        'gemini-1.5-flash-8b',  
+        'gemini-1.5-pro'
     ]
     
     success = False
@@ -137,36 +135,31 @@ if generate_btn and user_input:
     4. 🎒 ASSETS (Loot & Hook)
     """
 
-    with st.spinner('SEARCHING AVAILABLE NEURAL LINKS...'):
-        # 循环尝试模型
+    with st.spinner('ESTABLISHING SECURE LINK...'):
         for model_name in model_list:
             status_placeholder = st.empty()
-            status_placeholder.caption(f"Trying connection node: {model_name}...")
+            status_placeholder.caption(f"Pinging satellite: {model_name}...")
             
             response, error = try_generate(model_name, prompt)
             
             if response:
                 final_response = response
                 success = True
-                status_placeholder.success(f"Connected via {model_name}")
+                status_placeholder.success(f"Link Established: {model_name}")
                 time.sleep(0.5)
                 status_placeholder.empty()
-                break # 成功了就跳出循环
+                break 
             else:
-                # 如果是 429 (限速)，打印警告并继续尝试下一个
                 if "429" in error:
-                    st.warning(f"⚠️ Node {model_name} busy (Rate Limit). Rerouting...")
-                # 如果是 404 (找不到)，继续下一个
+                    st.warning(f"⚠️ {model_name} Overloaded. Rerouting (Wait 2s)...")
+                    time.sleep(2) # 遇到限速强制休息2秒再试下一个
                 elif "404" in error:
-                    st.warning(f"⚠️ Node {model_name} offline. Rerouting...")
-                else:
-                    st.error(f"⚠️ Node {model_name} failed: {error}")
+                    st.warning(f"⚠️ {model_name} Not Found. Skipping...")
     
-    # 结果展示
     if success and final_response:
         st.markdown('<div class="warning-box">⚠️ TOP SECRET // NOFORN</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="report-container">{final_response.text}</div>', unsafe_allow_html=True)
         st.download_button("💾 DOWNLOAD FILE", final_response.text, "vanguard_report.md")
     else:
-        st.error("❌ ALL NODES FAILED. Please wait 1 minute and try again.")
-        st.caption("系统繁忙，所有模型都在冷却中。请稍等片刻。")
+        st.error("❌ CONNECTION LOST: Rate Limit Exceeded.")
+        st.info("💡 请等待 60 秒。你的免费额度已耗尽，Google 正在为你重置。喝口水再来！")
