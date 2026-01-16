@@ -152,8 +152,8 @@ with tab_gen:
         
         with st.spinner('PROCESSING...'):
             try:
-                # 🟢 使用最新的 flash 模型
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # 🟢 终极修复：使用 gemini-pro (兼容旧版本)
+                model = genai.GenerativeModel('gemini-pro')
                 res = model.generate_content(prompt)
                 
                 # 存入 Session State 防止刷新丢失
