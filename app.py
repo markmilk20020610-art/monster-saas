@@ -4,11 +4,11 @@ import time
 from supabase import create_client, Client
 
 # ==============================================================================
-# 1. 核心配置
+# 1. 核心配置 (已更名为 XENOGENESIS)
 # ==============================================================================
 st.set_page_config(
-    page_title="VANGUARD | Muse Engine",
-    page_icon="✒️",
+    page_title="XENOGENESIS | Intelligent Lifeform Engine", # 浏览器标签页名称
+    page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -23,87 +23,92 @@ except Exception as e:
     st.stop()
 
 # ==============================================================================
-# 2. UI 升级：更具书卷气与神秘感的赛博风格
+# 2. UI 升级：深海实验室风格
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 背景：深邃的墨水蓝+星空，更有文学想象空间 */
+    /* 全局背景：深海/虚空 */
     .stApp {
-        background: radial-gradient(circle at 50% 10%, #0f172a 0%, #000000 90%);
-        color: #e2e8f0;
+        background: linear-gradient(180deg, #020617 0%, #0f172a 50%, #000000 100%);
+        color: #cbd5e1;
     }
     
+    /* 字体优化 */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
     /* 侧边栏 */
     [data-testid="stSidebar"] {
-        background-color: #020617;
+        background-color: #0b1120;
         border-right: 1px solid #1e293b;
     }
 
-    /* 输入框：像打字机一样的质感 */
+    /* 标题样式 */
+    h1, h2, h3 { font-family: 'Cinzel', serif; letter-spacing: 2px; }
+    p, li { font-family: 'Lora', serif; font-size: 1.05rem; line-height: 1.7; }
+
+    /* 输入框 */
     .stTextArea textarea {
-        background-color: rgba(30, 41, 59, 0.8) !important;
+        background-color: #1e293b !important;
         color: #94a3b8 !important;
         border: 1px solid #334155 !important;
-        font-family: 'Georgia', serif; /* 换成衬线体，更有小说感 */
-        font-size: 1.1em;
-        border-radius: 4px;
-        backdrop-filter: blur(5px);
+        font-family: 'Lora', serif;
     }
     .stTextArea textarea:focus {
-        border: 1px solid #38bdf8 !important;
-        color: #e2e8f0 !important;
+        border-color: #6366f1 !important;
+        color: #f8fafc !important;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
     }
 
-    /* 按钮：灵感火花 */
+    /* 按钮 */
     div.stButton > button {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: linear-gradient(to right, #4f46e5, #6366f1);
         color: white;
         border: none;
-        font-family: 'Arial', sans-serif;
+        font-family: 'Cinzel', serif;
         font-weight: bold;
-        letter-spacing: 1px;
-        transition: all 0.3s;
+        transition: all 0.4s ease;
     }
     div.stButton > button:hover {
-        background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-        transform: translateY(-2px);
+        letter-spacing: 2px;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
     }
 
-    /* 结果卡片：文学档案风格 */
+    /* 结果卡片 */
     .report-container {
-        background: rgba(15, 23, 42, 0.9);
+        background: rgba(15, 23, 42, 0.95);
         border: 1px solid #334155;
-        border-left: 4px solid #38bdf8;
-        padding: 30px;
-        border-radius: 2px;
-        margin-bottom: 25px;
-        font-family: 'Georgia', serif; /* 核心：内容用衬线体，易于阅读 */
-        line-height: 1.8;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        padding: 35px;
+        border-radius: 4px;
+        margin-bottom: 30px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        position: relative;
+        overflow: hidden;
     }
-    
-    /* 引用块样式 */
-    blockquote {
-        border-left: 3px solid #94a3b8;
-        padding-left: 15px;
-        color: #cbd5e1;
-        font-style: italic;
-        background: rgba(255,255,255,0.05);
-        padding: 10px;
+    .report-container::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 3px;
+        background: linear-gradient(90deg, transparent, #6366f1, transparent);
     }
 
-    /* 等级样式差异 */
-    .report-gold { border-left: 4px solid #f59e0b; background: rgba(20, 10, 0, 0.8); } /* 琥珀色 */
-    .report-silver { border-left: 4px solid #94a3b8; }
+    /* 等级差异 */
+    .report-gold { border-left: 3px solid #f59e0b; }
+    .report-silver { border-left: 3px solid #94a3b8; }
     
-    /* 隐藏杂项 */
+    blockquote {
+        border-left: 2px solid #6366f1;
+        background: #1e1b4b;
+        padding: 15px;
+        font-style: italic;
+        color: #a5b4fc;
+    }
+
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 3. 身份逻辑
+# 3. 身份与数据库
 # ==============================================================================
 if 'user' not in st.session_state: st.session_state.user = None
 if 'tier' not in st.session_state: st.session_state.tier = "standard"
@@ -122,7 +127,7 @@ def login_user(email, password):
         st.session_state.user = response.user
         st.session_state.tier = get_user_tier(response.user.id)
         st.rerun()
-    except Exception as e: st.error(f"❌ Login Failed: {e}")
+    except Exception as e: st.error(f"❌ ACCESS DENIED: {e}")
 
 def register_user(email, password):
     try:
@@ -130,8 +135,8 @@ def register_user(email, password):
         if response.user: 
             try: supabase.table("profiles").insert({"id": response.user.id, "tier": "standard"}).execute()
             except: pass
-            st.success("✅ Created. Please Login.")
-    except Exception as e: st.error(f"❌ Error: {e}")
+            st.success("✅ SUBJECT REGISTERED.")
+    except Exception as e: st.error(f"❌ ERROR: {e}")
 
 def logout():
     supabase.auth.sign_out()
@@ -143,41 +148,42 @@ def save_archive(title, content):
     try:
         data = {"user_id": st.session_state.user.id, "title": title[:50], "content": content}
         supabase.table("archives").insert(data).execute()
-        st.toast("✅ Saved to Library", icon="📚")
+        st.toast("✅ SPECIMEN ARCHIVED", icon="🧬")
         time.sleep(1)
-    except: st.error("Save Failed")
+    except: st.error("Archive Failure")
 
 def load_archives():
     try: return supabase.table("archives").select("*").eq("user_id", st.session_state.user.id).order("created_at", desc=True).execute().data
     except: return []
 
 # ==============================================================================
-# 4. 登录页
+# 4. 登录页 (BRAND REFRESH: XENOGENESIS)
 # ==============================================================================
 if not st.session_state.user:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<br><br><h1 style='text-align: center; color: #38bdf8; font-family: serif;'>✒️ VANGUARD MUSE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748b;'>NARRATIVE BLOCK BREAKER</p>", unsafe_allow_html=True)
+        # 🟢 更新点：登录页标题
+        st.markdown("<br><br><h1 style='text-align: center; color: #6366f1;'>XENOGENESIS</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #64748b; font-family: Cinzel;'>INTELLIGENT LIFEFORM ENGINE</p>", unsafe_allow_html=True)
         
-        tab_l, tab_r = st.tabs(["AUTHOR LOGIN", "NEW WRITER"])
+        tab_l, tab_r = st.tabs(["ACCESS", "ENLIST"])
         with tab_l:
-            e = st.text_input("Email", key="l_e")
-            p = st.text_input("Password", type="password", key="l_p")
-            if st.button("ENTER LIBRARY", use_container_width=True): login_user(e, p)
+            e = st.text_input("ID", key="l_e")
+            p = st.text_input("KEY", type="password", key="l_p")
+            if st.button("ENTER LAB", use_container_width=True): login_user(e, p)
         with tab_r:
-            ne = st.text_input("Email", key="r_e")
-            np = st.text_input("Password", type="password", key="r_p")
+            ne = st.text_input("ID", key="r_e")
+            np = st.text_input("KEY", type="password", key="r_p")
             if st.button("REGISTER", use_container_width=True): register_user(ne, np)
     st.stop()
 
 # ==============================================================================
-# 5. 主控界面 (V13 灵感缪斯版)
+# 5. 主控界面 (V14 XENOGENESIS)
 # ==============================================================================
 TIER_CONFIG = {
-    "standard": {"count": 1, "label": "NOVICE AUTHOR", "style": "report-standard"},
-    "silver":   {"count": 2, "label": "PRO AUTHOR", "style": "report-silver"},
-    "gold":     {"count": 3, "label": "BESTSELLER", "style": "report-gold"}
+    "standard": {"count": 1, "label": "JUNIOR RESEARCHER", "style": "report-standard"},
+    "silver":   {"count": 2, "label": "SENIOR XENOLOGIST", "style": "report-silver"},
+    "gold":     {"count": 3, "label": "DIRECTOR", "style": "report-gold"}
 }
 user_tier = st.session_state.tier
 if user_tier not in TIER_CONFIG: user_tier = "standard"
@@ -185,111 +191,97 @@ config = TIER_CONFIG[user_tier]
 
 # --- 侧边栏 ---
 with st.sidebar:
-    st.caption(f"✍️ {config['label']}")
-    st.write(f"USER: **{st.session_state.user.email.split('@')[0]}**")
+    # 🟢 更新点：侧边栏标题
+    st.title("🧬 XENOGENESIS")
+    st.caption(f"ID: {st.session_state.user.email.split('@')[0]}")
     st.divider()
     
-    st.markdown("### 📚 INSPIRATION SLOTS")
+    st.markdown(f"**RANK: {config['label']}**")
+    
+    st.markdown("### 🔬 ANALYSIS PROTOCOLS")
     if user_tier == 'gold':
-        st.markdown("🔹 **Concept Alpha** (Active)")
-        st.markdown("🔹 **Concept Beta** (Active)")
-        st.markdown("🔸 **The Boss/Horror** (Active)")
+        st.markdown("✅ **Morphology Scan**")
+        st.markdown("✅ **Behavioral Profiling**")
+        st.markdown("✅ **Deep-Dive Metaphysics**")
     elif user_tier == 'silver':
-        st.markdown("🔹 **Concept Alpha** (Active)")
-        st.markdown("🔹 **Concept Beta** (Active)")
-        st.markdown("🔒 *The Boss (Locked)*")
+        st.markdown("✅ **Morphology Scan**")
+        st.markdown("✅ **Behavioral Profiling**")
+        st.markdown("🔒 *Metaphysics (Locked)*")
     else:
-        st.markdown("🔹 **Concept Alpha** (Active)")
-        st.markdown("🔒 *Concept Beta (Locked)*")
-        st.markdown("🔒 *The Boss (Locked)*")
+        st.markdown("✅ **Morphology Scan**")
+        st.markdown("🔒 *Behavioral Profiling (Locked)*")
+        st.markdown("🔒 *Metaphysics (Locked)*")
         
     st.divider()
-    if st.button("EXIT LIBRARY"): logout()
+    if st.button("LEAVE LAB"): logout()
 
 # --- 主内容 ---
-st.title("💡 THE MUSE ENGINE")
-st.caption("Don't just spawn a monster. Spawn a story.")
+# 🟢 更新点：主标题
+st.title("🧪 XENOLOGY LAB")
+st.markdown("*\"Evolution begins where reality ends.\"*")
 
-tab_muse, tab_lib = st.tabs(["🧠 BRAINSTORM", "📖 ARCHIVES"])
+tab_lab, tab_data = st.tabs(["🧬 SYNTHESIZE", "📂 SPECIMENS"])
 
-with tab_muse:
-    # --- V13 新增：流派选择器 ---
-    col_genre, col_input = st.columns([1, 3])
-    
-    with col_genre:
-        genre = st.selectbox(
-            "GENRE / STYLE",
-            ["Lovecraftian Horror (克苏鲁)", "Dark Fantasy (黑暗奇幻/魂系)", 
-             "Sci-Fi / Cyberpunk (科幻)", "Xianxia / Eastern (东方玄幻/仙侠)", 
-             "Urban Legend (都市传说)", "Post-Apocalyptic (废土)"]
-        )
-        st.info(f"Generating for: \n**{genre}**")
+with tab_lab:
+    col_g, col_i = st.columns([1, 3])
+    with col_g:
+        genre = st.selectbox("ECOLOGICAL CONTEXT", 
+            ["Cosmic Horror (宇宙恐怖)", "Dark Fantasy (黑暗奇幻)", "Cybernetic (赛博改造)", 
+             "Folklore/Myth (民俗神话)", "Post-Apocalyptic (废土)", "Surrealism (超现实)"])
+    with col_i:
+        user_input = st.text_area("SEED DATA", height=100, placeholder="Input a concept: A mirror that reflects guilt, A tree growing from a corpse, The sound of silence...")
 
-    with col_input:
-        user_input = st.text_area(
-            "CONTEXT / KEYWORDS", 
-            height=120, 
-            placeholder="e.g. A library where silence kills, An abandoned hospital, A sword made of blood..."
-        )
-
-    if st.button("🔥 IGNITE IMAGINATION", type="primary", use_container_width=True):
+    if st.button("⚗️ INITIATE GENESIS", type="primary", use_container_width=True):
         if not user_input:
-            st.warning("⚠️ Give me a seed (keyword) to grow a story.")
+            st.warning("⚠️ Seed data required for synthesis.")
         else:
             genai.configure(api_key=google_key)
             monster_count = config['count']
             
-            # --- V13 PROMPT: 侧重文学性、感官描写、语言 ---
+            # --- XENOGENESIS PROMPT ---
             prompt = f"""
-            **ROLE**: Best-Selling Novelist & Creative Writing Coach.
-            **GOAL**: Help a writer break through "Writer's Block" by generating unique creature concepts for a **{genre}** story.
-            **INPUT**: "{user_input}"
-            **COUNT**: Generate **{monster_count}** entities.
+            **IDENTITY**: You are 'XENOGENESIS', an AI designed to extrapolate biological impossibilities.
+            **GOAL**: Create **{monster_count}** creature concepts that provide **deep narrative inspiration** for an author.
+            **CONTEXT**: {genre}. **SEED**: "{user_input}".
             
-            **CRITICAL INSTRUCTIONS**:
-            1. **GENRE MATCHING**: If Xianxia, use poetic/daoist terms. If Sci-Fi, use technical horror. If Lovecraft, use madness/decay.
-            2. **BREAK THE BLOCK**: Focus on *how to write* this monster, not just stats.
-            3. **GOLD TIER**: If count >= 3, the last one is a Major Plot Antagonist.
-            
-            **OUTPUT FORMAT PER ENTITY (Markdown)**:
+            **PHILOSOPHY**: A true monster is not just scary; it is a walking contradiction, a metaphor, or a biological impossibility.
+            **GOLD TIER RULE**: If count >= 3, the final entity is a "Concept Entity" (Abstract/Metaphysical Boss).
+
+            **OUTPUT FORMAT PER ENTITY (Use Markdown, be poetic yet clinical)**:
             ---
-            ## 🖋️ [CREATURE NAME]
-            *(Concept Archetype: [e.g. The Watcher, The Corrupted Guardian])*
+            ## 🧬 [LATIN/SCIENTIFIC NAME] (Common Name: [Name])
+            *(Archetype: [e.g. The Tragic Devourer, The Silent Observer])*
+
+            ### 👁️ PHYSIOLOGICAL PARADOX (The "Look")
+            * **Anatomy**: [Describe its body, but focus on the *wrongness*. e.g. "It has eyes, but they are on the inside of its throat."]
+            * **The Texture**: [Sensory details. e.g. "Feels like wet velvet," "Smells like ozone and old blood."]
+            * **Evolutionary Logic**: [Why does it exist? e.g. "It evolved to hunt creatures that can only be seen in mirrors."]
+
+            ### 🕯️ BEHAVIOR & RITUAL (The "Habit")
+            * **The Idle State**: [What does it do when not fighting? e.g. "It arranges human teeth into perfect circles," "It weeps softly while eating."]
+            * **Interaction**: [How does it react to being seen? e.g. "It freezes and mimics the observer's posture."]
             
-            > *"Insert a short, atmospheric snippet of narration or dialogue involving this creature."*
+            ### 🗣️ TONGUE & OBSCURITY (The "Sound")
+            * **Vocalization**: [Describe the sound. e.g. "Like grinding stones," "A frequency that causes nosebleeds."]
+            * **Obscure Language**: [If it speaks, give a sample line in a made-up language or cryptic riddle. e.g. *"Kla-thrum... you taste like forgotten years..."*]
             
-            ### 👁️ SENSORY SIGNATURE (How to describe it)
-            * **Visual**: [Don't just say 'big'. Describe textures, lighting, unnatural movements]
-            * **Smell/Atmosphere**: [e.g., Smells like ozone and burnt hair, or the air gets cold]
-            * **Sound**: [Specifics: Chittering, low-frequency hum, wet slapping sounds]
-            
-            ### 🗣️ LANGUAGE & OBSCURITY (The Weird Factor)
-            * **Communication**: [Does it speak? Telepathy? Mimicry? Silence?]
-            * **Sample Line/Sound**: [Give a specific line of dialogue or sound effect description. e.g., "It whispers your dead mother's name backwards" or "Zhh-krr-tchk..."]
-            * **Habit**: [What weird thing does it do when not fighting? e.g., It organizes bones by size, it stares at mirrors.]
-            
-            ### 🎬 THE BREAKTHROUGH SCENE (How to introduce it)
-            * **Scenario**: [A short prompt for a scene. e.g., "The protagonist thinks it's a statue until it blinks."]
-            * **The Twist**: [Something unexpected about it.]
-            
-            ### ⚔️ INTERACTION MECHANICS (If conflict occurs)
-            * **Method of Attack**: [Not just 'hits hard'. e.g., It steals memories, it ages you by touching.]
-            * **Weakness**: [Narrative weakness. e.g., Cannot cross running water, afraid of its own reflection.]
-            
-            ### 🔗 PLOT HOOK
-            * **Implication**: [What does its existence imply about the world?]
+            ### 🩸 THE AUTHOR'S BREAKTHROUGH (The "Idea")
+            * **The Metaphor**: [What does this monster represent conceptually? e.g. "The fear of dementia," "The inevitability of decay."]
+            * **Plot Hook**: [A unique way to introduce it that isn't just a jump scare.]
+            * **The Loot (with Lore)**: [An item it drops that tells a sad or scary story.]
+
             ---
             """
             
-            with st.spinner(f'weaving nightmares for {genre}...'):
+            with st.spinner(f'Xenogenesis Sequence Initiated...'):
                 try:
-                    generation_config = genai.types.GenerationConfig(temperature=0.9) # 高创造性
+                    generation_config = genai.types.GenerationConfig(temperature=0.95) # 极高的创造性
                     model = genai.GenerativeModel('gemini-2.0-flash')
                     res = model.generate_content(prompt, generation_config=generation_config)
                     st.session_state.current_result = res.text
                     st.session_state.current_input = f"[{genre}] {user_input}"
                 except Exception as e:
-                    st.error(f"Writer's Block too strong (Error): {e}")
+                    st.error(f"Synthesis Error: {e}")
 
     # 结果展示
     if 'current_result' in st.session_state:
@@ -302,16 +294,16 @@ with tab_muse:
         
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("💾 SAVE IDEA"):
+            if st.button("💾 ARCHIVE SPECIMEN"):
                 save_archive(st.session_state.current_input, st.session_state.current_result)
         with c2:
-            st.download_button("📥 EXPORT TEXT", st.session_state.current_result, "story_ideas.md")
+            st.download_button("📥 EXPORT DOSSIER", st.session_state.current_result, "xenogenesis_report.md")
 
-with tab_lib:
+with tab_data:
     archives = load_archives()
     if not archives:
-        st.caption("Your library is empty. Go find your muse.")
+        st.caption("No biological data found.")
     else:
         for item in archives:
-            with st.expander(f"📜 {item['created_at'][:10]} | {item['title']}"):
+            with st.expander(f"📁 {item['created_at'][:10]} | {item['title']}"):
                 st.markdown(item['content'])
